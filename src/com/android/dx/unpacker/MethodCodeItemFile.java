@@ -35,13 +35,14 @@ public class MethodCodeItemFile
             }
             for(int i=0;i<items.length;i++){
                 String codeJson=items[i];
-//                System.out.println("codeJson:"+codeJson);
+
                 //发现保存的json有点问题，应该给base64的值用双引号包起来，不然gson会出现解析失败的
                 codeJson=codeJson.replace("ins:","ins:\"");
                 codeJson=codeJson.replace("}","\"}");
                 codeJson=codeJson.replace("name:","name:\"");
                 codeJson=codeJson.replace(",method_idx","\",method_idx");
-
+                
+                
                 JsonCodeItem codedata= gson.fromJson(codeJson,JsonCodeItem.class);
                 MethodCodeItem codeItem = new MethodCodeItem();
                 codeItem.index = codedata.method_idx;
@@ -52,15 +53,6 @@ public class MethodCodeItemFile
                 this.map.put(codeItem.index, codeItem);
             }
 
-//            while (data.hasRemaining())
-//            {
-//                MethodCodeItem codeItem = new MethodCodeItem();
-//                codeItem.index = readInt();
-//                codeItem.descriptor = readCString();
-//                codeItem.size = readInt();
-//                codeItem.code = readByteArray(codeItem.size);
-//                this.map.put(codeItem.index, codeItem);
-//            }
         }
         catch (Exception e)
         {

@@ -167,6 +167,7 @@ public final class DexMerger {
     }
 
     private Dex mergeDexes() throws IOException {
+    	/* 合併多個dex的string_ids、type_ids等結構 */
         mergeStringIds();
         mergeTypeIds();
         mergeTypeLists();
@@ -175,8 +176,11 @@ public final class DexMerger {
         mergeMethodIds();
         mergeMethodHandles();
         mergeAnnotations();
+        
         unionAnnotationSetsAndDirectories();
         mergeCallSiteIds();
+        
+        // 在這裡面替換code_item
         mergeClassDefs();
 
         // computeSizesFromOffsets expects sections sorted by offset, so make it so
@@ -280,10 +284,12 @@ public final class DexMerger {
 
             int outCount = 0;
             while (!values.isEmpty()) {
+            	// pollFirstEntry: pop 鍵值最小的那元素
                 Map.Entry<T, List<Integer>> first = values.pollFirstEntry();
                 for (Integer dex : first.getValue()) {
                     updateIndex(offsets[dex], indexMaps[dex], indexes[dex]++, outCount);
                     // Fetch the next value of the dexes we just polled out
+                    // 調用 readIntoMap 方法從 dexSections 中讀取下一個值，並將其存入 values 中。
                     offsets[dex] = readIntoMap(dexSections[dex], sections[dex],
                             indexMaps[dex], indexes[dex], values, dex);
                 }
@@ -610,6 +616,7 @@ public final class DexMerger {
 
         for (SortableType type : types) {
             Dex in = type.getDex();
+            // here
             transformClassDef(in, type.getClassDef(), type.getIndexMap());
         }
     }
@@ -680,16 +687,32 @@ public final class DexMerger {
      */
     private void unionAnnotationSetsAndDirectories() {
         for (int i = 0; i < dexes.length; i++) {
-            transformAnnotationSets(dexes[i], indexMaps[i]);
+            try{
+            	transformAnnotationSets(dexes[i], indexMaps[i]);
+            }catch (Exception ex){
+                System.out.println("transformAnnotationSets Exception " + ex.getMessage());
+            }
         }
         for (int i = 0; i < dexes.length; i++) {
-            transformAnnotationSetRefLists(dexes[i], indexMaps[i]);
+            try{
+            	transformAnnotationSetRefLists(dexes[i], indexMaps[i]);
+            }catch (Exception ex){
+                System.out.println("transformAnnotationSetRefLists Exception " + ex.getMessage());
+            }
         }
         for (int i = 0; i < dexes.length; i++) {
-            transformAnnotationDirectories(dexes[i], indexMaps[i]);
+            try{
+            	transformAnnotationDirectories(dexes[i], indexMaps[i]);
+            }catch (Exception ex){
+                System.out.println("transformAnnotationDirectories Exception " + ex.getMessage());
+            }
         }
         for (int i = 0; i < dexes.length; i++) {
-            transformStaticValues(dexes[i], indexMaps[i]);
+            try{
+            	transformStaticValues(dexes[i], indexMaps[i]);
+            }catch (Exception ex){
+                System.out.println("transformStaticValues Exception " + ex.getMessage());
+            }
         }
     }
 
@@ -748,7 +771,13 @@ public final class DexMerger {
         idsDefsOut.writeInt(sourceFileIndex);
 
         int annotationsOff = classDef.getAnnotationsOffset();
-        idsDefsOut.writeInt(indexMap.adjustAnnotationDirectory(annotationsOff));
+        // 忽略注釋造成的錯誤
+        try{
+        	idsDefsOut.writeInt(indexMap.adjustAnnotationDirectory(annotationsOff));
+        }catch (Exception ex){
+        	idsDefsOut.writeInt(0);
+        }
+        
 
         int classDataOff = classDef.getClassDataOffset();
         if (classDataOff == 0) {
@@ -756,6 +785,7 @@ public final class DexMerger {
         } else {
             idsDefsOut.writeInt(classDataOut.getPosition());
             ClassData classData = in.readClassData(classDef);
+            // here
             transformClassData(in, classData, indexMap);
         }
 
@@ -859,6 +889,7 @@ public final class DexMerger {
 
         transformFields(indexMap, staticFields);
         transformFields(indexMap, instanceFields);
+        // 處理直接方法和虛方法的地方
         transformMethods(in, indexMap, directMethods);
         transformMethods(in, indexMap, virtualMethods);
     }
@@ -877,19 +908,23 @@ public final class DexMerger {
         int lastOutMethodIndex = 0;
         for (ClassData.Method method : methods) {
             int outMethodIndex = indexMap.adjustMethod(method.getMethodIndex());
+            // 1. DexMethod.methodIdx
             classDataOut.writeUleb128(outMethodIndex - lastOutMethodIndex);
             lastOutMethodIndex = outMethodIndex;
 
-            //将method codeItem替换为dump下来的
+            // codeItems 是我傳入的code_items, 只有當前method_idx 不在 codeItems 時會進入這個分支,
+            // 代表使用原本的code_item而非我傳入的code_item
             if (!codeItems.containsKey(method.getMethodIndex())) {
+            	
                 classDataOut.writeUleb128(method.getAccessFlags());
-
+                
                 if (method.getCodeOffset() == 0) {
                     classDataOut.writeUleb128(0);
                 } else {
                     codeOut.alignToFourBytesWithZeroFill();
                     classDataOut.writeUleb128(codeOut.getPosition());
                     try{
+                    	// 
                         transformCode(in, in.readCode(method), indexMap);
                     }catch (Exception ex){
                         System.out.println("tracesformCode Exception "+ex.getMessage());
@@ -897,15 +932,20 @@ public final class DexMerger {
 
                 }
             }
+            // 當method_idx存在於codeItems時, 走這個分支, 代表使用我傳入的code_item
             else {
                 MethodCodeItem codeItem = codeItems.get(method.getMethodIndex());
+                // 2. DexMethod.accessFlags
                 classDataOut.writeUleb128(method.getAccessFlags() & (~AccessFlags.ACC_NATIVE));
                 codeOut.alignToFourBytesWithZeroFill();
+                // 3. DexMethod.codeOff
                 classDataOut.writeUleb128(codeOut.getPosition());
+                
                 contentsOut.codes.size++;
                 codeOut.assertFourByteAligned();
                 //+8为debugInfoOffset相对codeItem的偏移
                 int debugInfoOffsetPosition = codeOut.getPosition() + 8;
+                // 寫入我傳入的code_item
                 codeOut.write(codeItem.code);
 
                 //修正debugInfoOffset

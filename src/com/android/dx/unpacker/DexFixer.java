@@ -17,7 +17,8 @@ class DexFixer
 {
     public static void main(String[] args) throws IOException
     {
-        if (args.length < 3)
+        
+    	if (args.length < 3)
         {
             printUsage();
             return;
@@ -26,7 +27,8 @@ class DexFixer
         String dexpath=args[0];
         String binpath=args[1];
         String outpath=args[2];
-
+        
+        
         File dexfile = new File(dexpath);
         File binfile = new File(binpath);
         if(!dexfile.exists() || !binfile.exists()){
@@ -45,58 +47,11 @@ class DexFixer
                 methodCodeItemFile.getMethodCodeItems()).merge();
         merged.writeTo(new File(outpath));
         System.out.println("success");
-//        String unpackerPath = args[0];
-//        File unpackerDir = new File(unpackerPath);
-//        File dexDir = new File(unpackerPath + "/dex");
-//        File methodDir = new File(unpackerPath + "/method");
-//        if (!unpackerDir.isDirectory() || !dexDir.isDirectory() || !methodDir.isDirectory())
-//        {
-//            printUsage();
-//        }
-//
-//        String outputPath = args[1];
-//        File outputDir = new File(outputPath);
-//        if (!outputDir.exists())
-//        {
-//            if (!outputDir.mkdir())
-//            {
-//                System.out.println("Error: mkdir " + outputDir + " fail!");
-//                System.exit(-1);
-//            }
-//        }
-//
-//        File[] dexFiles = dexDir.listFiles();
-//        assert dexFiles != null;
-//        for (File dexFile : dexFiles)
-//        {
-//            if (!dexFile.getPath().endsWith(".dex")) {
-//                continue;
-//            }
-//
-//            Dex[] dexes = new Dex[1];
-//            dexes[0] = new Dex(dexFile);
-//            String methodCodeItemPath = methodDir + "/" + dexFile.getName().substring(0,
-//                    dexFile.getName().length() - 4) + "_codeitem.bin";
-//            String outputDexPath = outputPath + "/" + dexFile.getName();
-//            File file = new File(methodCodeItemPath);
-//            if (!file.exists())
-//            {
-//                System.out.println("Warn:" + methodCodeItemPath + " not exists!");
-//                Files.copy(dexFile.toPath(), new File(outputDexPath).toPath(),
-//                        StandardCopyOption.REPLACE_EXISTING);
-//                continue;
-//            }
-//            MethodCodeItemFile methodCodeItemFile = new MethodCodeItemFile(file);
-//            Dex merged = new DexMerger(dexes, CollisionPolicy.KEEP_FIRST, new DxContext(),
-//                    methodCodeItemFile.getMethodCodeItems()).merge();
-//            merged.writeTo(new File(outputDexPath));
-//        }
-
 
     }
 
     private static void printUsage()
     {
-        System.out.println("Usage: DexFixer unpacker output");
+        System.out.println("Usage: DexFixer <dex_file> <ins_bin> <output_path>");
     }
 }
