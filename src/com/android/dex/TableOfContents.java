@@ -168,7 +168,10 @@ public final class TableOfContents {
                 return section;
             }
         }
-        throw new IllegalArgumentException("No such map item: " + type);
+        //throw new IllegalArgumentException("No such map item: " + type);
+        // add
+        return new Section(type);
+        // addend
     }
 
     public void writeHeader(Dex.Section out, int api) throws IOException {

@@ -28,6 +28,11 @@ class DexFixer
         String binpath=args[1];
         String outpath=args[2];
         
+    	/*test
+        String dexpath="C:\\Users\\user\\Desktop\\eclipse_test\\1398708_dexfile.dex";
+        String binpath="C:\\Users\\user\\Desktop\\eclipse_test\\1398708_ins_merge.bin";
+        String outpath="C:\\Users\\user\\Desktop\\eclipse_test\\out.dex";
+        */
         
         File dexfile = new File(dexpath);
         File binfile = new File(binpath);
